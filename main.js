@@ -88,6 +88,14 @@ function main() {
       150, 150, 150
     )
 
+    const zVector = new Vector(-1, -1, 0)
+    const zCoords = Vector.add(center, zVector.normalize().multiplyByScalar(150))
+    drawer.drawLine(
+      center.x, center.y, 
+      zCoords.x, zCoords.y, 
+      150, 150, 150
+    )
+
     context.putImageData(imageData, 0, 0)
   }, 100)
 
