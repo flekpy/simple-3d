@@ -5,10 +5,10 @@ function main() {
   const drawer = new Drawer(imageData.data, imageData.width, imageData.height)
 
   const vertices = [
-    new Vector(-1, 1, 1),
-    new Vector(-1, 1, -1),
-    new Vector(1, 1, -1),
-    new Vector(1, 1, 1),
+    new Vector(-0.5, 1, 0.5),
+    new Vector(-0.5, 1, -0.5),
+    new Vector(0.5, 1, -0.5),
+    new Vector(0.5, 1, 0.5),
     new Vector(-1, -1, 1),
     new Vector(-1, -1, -1),
     new Vector(1, -1, -1),
@@ -35,7 +35,7 @@ function main() {
 
   let angle = 0
   setInterval(() => {
-    let matrix = Matrix.getRotationX(20)
+    let matrix = Matrix.getRotationX(0)
 
     matrix = Matrix.multiply(
       Matrix.getRotationY(angle += 1),
@@ -48,8 +48,27 @@ function main() {
     )
 
     matrix = Matrix.multiply(
-      Matrix.getTranslation(400, -300, 0),
+      Matrix.getTranslation(0, 0, -300),
       matrix 
+    )
+
+    matrix = Matrix.multiply(
+      Matrix.getLookAt(
+        // new Vector(0, 0, 0),
+        // new Vector(0, 0, -1),
+        cameraPos,
+        Vector.add(cameraPos, cameraDirection),
+        new Vector(0, 1, 0),
+      ),
+      matrix
+    )
+
+    matrix = Matrix.multiply(
+      Matrix.getPerspectiveProjection(
+        90, 800 / 600,
+        -1, -1000
+      ),
+      matrix
     )
 
     const sceneVertices = []
@@ -59,6 +78,8 @@ function main() {
         vertices[i]
       )
 
+      vertex.x = (vertex.x / vertex.w * 400)
+      vertex.y = (vertex.y / vertex.w * 300)
       sceneVertices.push(vertex)
     }
 
@@ -72,33 +93,32 @@ function main() {
         sceneVertices[e[0]].y,
         sceneVertices[e[1]].x,
         sceneVertices[e[1]].y,
-        0, 0, 255
+        255, 0, 0
       )
     }
 
-    const center = new Vector(400, -300, 0)
-    drawer.drawLine(
-      center.x, center.y, 
-      center.x, center.y + 200, 
-      150, 150, 150
-    )
-    drawer.drawLine(
-      center.x, center.y, 
-      center.x + 200, center.y, 
-      150, 150, 150
-    )
-
-    const zVector = new Vector(-1, -1, 0)
-    const zCoords = Vector.add(center, zVector.normalize().multiplyByScalar(150))
-    drawer.drawLine(
-      center.x, center.y, 
-      zCoords.x, zCoords.y, 
-      150, 150, 150
-    )
+    // const center = new Vector(400, -300, 0)
+    // drawer.drawLine(
+    //   center.x, center.y, 
+    //   center.x, center.y + 200, 
+    //   150, 150, 150
+    // )
+    // drawer.drawLine(
+    //   center.x, center.y, 
+    //   center.x + 200, center.y, 
+    //   150, 150, 150
+    // )
+    //
+    // const zVector = new Vector(-1, -1, 0)
+    // const zCoords = Vector.add(center, zVector.normalize().multiplyByScalar(150))
+    // drawer.drawLine(
+    //   center.x, center.y, 
+    //   zCoords.x, zCoords.y, 
+    //   150, 150, 150
+    // )
 
     context.putImageData(imageData, 0, 0)
   }, 100)
-
 }
 
 class Drawer {
@@ -113,9 +133,11 @@ class Drawer {
   }
 
   drawPixel(x, y, r, g, b) {
-    const offset = (this.width * -y + x) * 4
+    x += this.width / 2
+    y = -(y - this.height / 2)
+    const offset = (this.width * y + x) * 4
 
-    if (x >= 0 && x < this.width && -y >= 0 && y < this.height) {
+    if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
       this.surface[offset] = r
       this.surface[offset + 1] = g
       this.surface[offset + 2] = b
@@ -169,6 +191,22 @@ class Vector {
     this.y = y 
     this.z = z 
     this.w = w 
+  }
+
+  static crossProduct(v1, v2) {
+    return new Vector(
+      v1.y * v2.z - v1.z * v2.y,
+      v1.z * v2.x - v1.x * v2.z,
+      v1.x * v2.y - v1.y * v2.x,
+    )
+  }
+
+  static substruct(v1, v2) {
+    return new Vector(
+      v1.x - v2.x,
+      v1.y - v2.y,
+      v1.z - v2.z,
+    )
   }
 
   static add(v1, v2) {
@@ -281,4 +319,58 @@ class Matrix {
       [0, 0, 0, 1],
     ];
   }
+
+  static getLookAt(eye, target, up) {
+    const vz = Vector.substruct(eye, target).normalize();
+    const vx = Vector.crossProduct(up, vz).normalize();
+    const vy = Vector.crossProduct(vz, vx).normalize();
+
+    return Matrix.multiply(
+      Matrix.getTranslation(-eye.x, -eye.y, -eye.z),
+      [
+        [vx.x, vx.y, vx.z, 0],
+        [vy.x, vy.y, vy.z, 0],
+        [vz.x, vz.y, vz.z, 0],
+        [0, 0, 0, 1]
+      ]);
+  }
+
+  static getPerspectiveProjection(fovy, aspect, n, f) {
+    const radians = Math.PI / 180 * fovy
+    const sx = (1 / Math.tan(radians / 2)) / aspect;
+    const sy = (1 / Math.tan(radians / 2));
+    const sz = (f + n) / (f - n);
+    const dz = (-2 * f * n) / (f - n);
+    return [
+      [sx, 0, 0, 0],
+      [0, sy, 0, 0],
+      [0, 0, sz, dz],
+      [0, 0, -1, 0],
+    ]
+  }
 }
+
+let cameraDirection = new Vector(0, 0, -1, 0)
+let cameraPos = new Vector(0, 0, 0)
+
+window.addEventListener('keypress', (e) => {
+  const speed = 5;
+  cameraDirection.normalize();
+  if (e.code === 'KeyW') {
+    cameraPos = Vector.add(cameraPos, cameraDirection.multiplyByScalar(speed))
+  } else if (e.code === 'KeyS') {
+    cameraPos = Vector.substruct(cameraPos, cameraDirection.multiplyByScalar(speed))
+  } else if (e.code === 'KeyA') {
+    const normal = Vector.crossProduct(
+      new Vector(0, 1, 0),
+      cameraDirection
+    ).normalize();
+    cameraPos = Vector.add(cameraPos, normal.multiplyByScalar(speed));
+  } else if (e.code === 'KeyD') {
+    const normal = Vector.crossProduct(
+      new Vector(0, 1, 0),
+      cameraDirection
+    ).normalize();
+    cameraPos = Vector.substruct(cameraPos, normal.multiplyByScalar(speed));
+  }
+});
