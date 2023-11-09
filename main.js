@@ -15,21 +15,19 @@ function main() {
     new Vector(1, -1, 1),
   ]
 
-  const edges = [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 0],
-
-    [0, 4],
-    [1, 5],
-    [2, 6],
-    [3, 7],
-
-    [4, 5],
-    [5, 6],
-    [6, 7],
-    [7, 4],
+  const indices = [
+    [0, 1, 2],
+    [0, 2, 3],
+    [4, 6, 5],
+    [4, 7, 6],
+    [0, 5, 1],
+    [0, 4, 5],
+    [1, 5, 2],
+    [6, 2, 5],
+    [3, 2, 6], 
+    [3, 6, 7], 
+    [3, 4, 0], 
+    [4, 3, 7], 
   ]
 
 
@@ -85,37 +83,44 @@ function main() {
 
     drawer.clearSurface()
 
-    for (let i = 0; i < edges.length; i++) {
-      const e = edges[i]
+    for (let i = 0; i < indices.length; i++) {
+      const e = indices[i]
 
-      drawer.drawLine(
-        sceneVertices[e[0]].x,
-        sceneVertices[e[0]].y,
-        sceneVertices[e[1]].x,
-        sceneVertices[e[1]].y,
-        255, 0, 0
-      )
+      let v1 = sceneVertices[e[0]]
+      let v2 = sceneVertices[e[1]]
+      let v3 = sceneVertices[e[2]]
+
+      let t1 = Vector.substruct(v1, v2)
+      let t2 = Vector.substruct(v2, v3)
+      let normal = Vector.crossProduct(t1, t2).normalize()
+      let res = Vector.scalarProduct(cameraDirection, normal)
+
+      if (res > 0) {
+        drawer.drawLine(
+          v1.x,
+          v1.y,
+          v2.x,
+          v2.y,
+          255, 0, 0
+        );
+
+        drawer.drawLine(
+          v2.x,
+          v2.y,
+          v3.x,
+          v3.y,
+          255, 0, 0
+        );
+
+        drawer.drawLine(
+          v1.x,
+          v1.y,
+          v3.x,
+          v3.y,
+          255, 0, 0
+        );
+      }
     }
-
-    // const center = new Vector(400, -300, 0)
-    // drawer.drawLine(
-    //   center.x, center.y, 
-    //   center.x, center.y + 200, 
-    //   150, 150, 150
-    // )
-    // drawer.drawLine(
-    //   center.x, center.y, 
-    //   center.x + 200, center.y, 
-    //   150, 150, 150
-    // )
-    //
-    // const zVector = new Vector(-1, -1, 0)
-    // const zCoords = Vector.add(center, zVector.normalize().multiplyByScalar(150))
-    // drawer.drawLine(
-    //   center.x, center.y, 
-    //   zCoords.x, zCoords.y, 
-    //   150, 150, 150
-    // )
 
     context.putImageData(imageData, 0, 0)
   }, 100)
@@ -191,6 +196,10 @@ class Vector {
     this.y = y 
     this.z = z 
     this.w = w 
+  }
+
+  static scalarProduct(a, b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z
   }
 
   static crossProduct(v1, v2) {
